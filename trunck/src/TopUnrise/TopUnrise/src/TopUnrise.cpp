@@ -4,6 +4,8 @@
 #include "stdafx.h"
 #include "plugin.h"
 
+#include "MemLeaker.h"
+
 #define PLUGIN_EXPORTS
 
 #define MIN_SCALE 1
@@ -147,10 +149,16 @@ BOOL InputInfoThenCalc2(char * Code,short nSetCode,int Value[4],short DataType,N
 	//NTime tmpTime={0};
 	if ( Value[0] < MIN_SCALE || Value[0] > MAX_SCALE 
 		|| NULL == Code )
-		return nRet;
+		goto endCalc2;
+
+	/* 过滤*/
+	{
+		//
+	}
 
 	float fFatherRate = 0.0, fSonRate = 0.0;
 
+	/* 计算对应大盘上升空间百分比 */
 	{
 		EFatherCode eFCode = mathFatherCode(Code);
 		if (EFatherCodeMax == eFCode)
@@ -158,7 +166,7 @@ BOOL InputInfoThenCalc2(char * Code,short nSetCode,int Value[4],short DataType,N
 			OutputDebugString(L"========= Didn't find FatherCode for ");
 			OutputDebugString((LPCWSTR)Code);
 			OutputDebugString(L" =========\n");
-			return nRet;
+			goto endCalc2;
 		}
 		//判断是否计算过对应指数
 		if (fEqual(g_fFatherRate[eFCode], 0.0))
@@ -171,7 +179,7 @@ BOOL InputInfoThenCalc2(char * Code,short nSetCode,int Value[4],short DataType,N
 			if ( 2 > datanum )
 			{
 				OutputDebugString(L"========= g_pFuncCallBack error! =========\n");
-				return nRet;
+				goto endCalc2;
 			}
 		
 			LPHISDAT pHisDat = new HISDAT[datanum];
@@ -182,7 +190,7 @@ BOOL InputInfoThenCalc2(char * Code,short nSetCode,int Value[4],short DataType,N
 				OutputDebugString(L"========= g_pFuncCallBack read error! =========\n");
 				delete pHisDat;
 				pHisDat = NULL;
-				return nRet;
+				goto endCalc2;
 			}
 		
 			//查找最高收盘价
@@ -192,7 +200,7 @@ BOOL InputInfoThenCalc2(char * Code,short nSetCode,int Value[4],short DataType,N
 				OutputDebugString(L"========= maxClose error! =========\n");
 				delete []pHisDat;
 				pHisDat=NULL;
-				return nRet;
+				goto endCalc2;
 			}
 			//计算空间百分比
 			LPHISDAT pLate = pHisDat + readnum - 1;
@@ -209,6 +217,7 @@ BOOL InputInfoThenCalc2(char * Code,short nSetCode,int Value[4],short DataType,N
 		}		
 	}
 
+	/* 计算个股上升空间百分比 */
 	{
 		/**读取个股取数据 */
 		LPHISDAT pMax = NULL;
@@ -218,7 +227,7 @@ BOOL InputInfoThenCalc2(char * Code,short nSetCode,int Value[4],short DataType,N
 		if ( 2 > datanum )
 		{
 			OutputDebugString(L"========= g_pFuncCallBack error! =========\n");
-			return nRet;
+			goto endCalc2;
 		}
 
 		LPHISDAT pHisDat = new HISDAT[datanum];
@@ -229,7 +238,7 @@ BOOL InputInfoThenCalc2(char * Code,short nSetCode,int Value[4],short DataType,N
 			OutputDebugString(L"========= g_pFuncCallBack read error! =========\n");
 			delete pHisDat;
 			pHisDat = NULL;
-			return nRet;
+			goto endCalc2;
 		}
 		
 		//查找最高收盘价
@@ -239,7 +248,7 @@ BOOL InputInfoThenCalc2(char * Code,short nSetCode,int Value[4],short DataType,N
 			OutputDebugString(L"========= maxClose error! =========\n");
 			delete []pHisDat;
 			pHisDat=NULL;
-			return nRet;
+			goto endCalc2;
 		}
 		/*计算空间百分比*/
 		LPHISDAT pLate = pHisDat + readnum - 1;
@@ -252,7 +261,7 @@ BOOL InputInfoThenCalc2(char * Code,short nSetCode,int Value[4],short DataType,N
 
 			delete []pHisDat;
 			pHisDat=NULL;
-			return nRet;
+			goto endCalc2;
 		}*/
 
 		fSonRate = (pMax->Close - pLate->Close)/pLate->Close;
@@ -260,8 +269,10 @@ BOOL InputInfoThenCalc2(char * Code,short nSetCode,int Value[4],short DataType,N
 		pHisDat=NULL;
 	}
 	
-	if ((fSonRate/fFatherRate > ((float)Value[0])-0.02))
+	if (fSonRate > fFatherRate*((float)Value[0]))
 		nRet = TRUE;
 	
+endCalc2:
+	MEMLEAK_OUTPUT();
 	return nRet;
 }

@@ -76,6 +76,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="inc\MemLeaker.h" />
     <ClInclude Include="inc\OutStruct.h" />
     <ClInclude Include="inc\Plugin.h" />
     <ClInclude Include="inc\StdAfx.h" />
