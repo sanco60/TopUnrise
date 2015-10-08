@@ -58,7 +58,7 @@ void GetCopyRightInfo(LPPLUGIN info)
 
 const	BYTE	g_nAvoidMask[]={0xF8,0xF8,0xF8,0xF8};	// 无效数据标志(系统定义)
 
-char* g_nFatherCode[] = { "999999", "399001", "399101", "399102" };
+char* g_nFatherCode[] = { "999999", "399001", "399005", "399006" };
 float g_fFatherRate[] = {0.0, 0.0, 0.0, 0.0};
 
 typedef enum _eFatherCode
@@ -146,15 +146,10 @@ BOOL InputInfoThenCalc1(char * Code,short nSetCode,int Value[4],short DataType,s
 BOOL InputInfoThenCalc2(char * Code,short nSetCode,int Value[4],short DataType,NTime time1,NTime time2,BYTE nTQ,unsigned long unused)  //选取区段
 {
 	BOOL nRet = FALSE;
-	//NTime tmpTime={0};
+
 	if ( Value[0] < MIN_SCALE || Value[0] > MAX_SCALE 
 		|| NULL == Code )
-		goto endCalc2;
-
-	/* 过滤*/
-	{
-		//
-	}
+		goto endCalc2;	
 
 	float fFatherRate = 0.0, fSonRate = 0.0;
 
@@ -178,7 +173,7 @@ BOOL InputInfoThenCalc2(char * Code,short nSetCode,int Value[4],short DataType,N
 			long datanum = g_pFuncCallBack(g_nFatherCode[eFCode],nSetCode,DataType,NULL,-1,time1,time2,nTQ,0);
 			if ( 2 > datanum )
 			{
-				OutputDebugString(L"========= g_pFuncCallBack error! =========\n");
+				//OutputDebugString(L"========= g_pFuncCallBack error! =========\n");
 				goto endCalc2;
 			}
 		
@@ -188,7 +183,7 @@ BOOL InputInfoThenCalc2(char * Code,short nSetCode,int Value[4],short DataType,N
 			if ( 2 > readnum || readnum > datanum )
 			{
 				OutputDebugString(L"========= g_pFuncCallBack read error! =========\n");
-				delete pHisDat;
+				delete[] pHisDat;
 				pHisDat = NULL;
 				goto endCalc2;
 			}
@@ -198,8 +193,8 @@ BOOL InputInfoThenCalc2(char * Code,short nSetCode,int Value[4],short DataType,N
 			if (NULL == pMax)
 			{
 				OutputDebugString(L"========= maxClose error! =========\n");
-				delete []pHisDat;
-				pHisDat=NULL;
+				delete[] pHisDat;
+				pHisDat = NULL;
 				goto endCalc2;
 			}
 			//计算空间百分比
@@ -208,13 +203,34 @@ BOOL InputInfoThenCalc2(char * Code,short nSetCode,int Value[4],short DataType,N
 
 			g_fFatherRate[eFCode] = fFatherRate;
 
-			delete []pHisDat;
-			pHisDat=NULL;
+			delete[] pHisDat;
+			pHisDat = NULL;
 		}
 		else
 		{
 			fFatherRate = g_fFatherRate[eFCode];
 		}		
+	}
+
+	/* 过滤名称开头为：S和*的股票 */
+	{
+		LPSTOCKINFO pStockInfo = new STOCKINFO[2];
+		memset(pStockInfo, 0, 2*sizeof(STOCKINFO));
+		long readnum = g_pFuncCallBack(Code, nSetCode, STKINFO_DAT, pStockInfo, 1, time2, time2, nTQ, 0);
+		if (readnum <= 0)
+		{
+			delete[] pStockInfo;
+			pStockInfo = NULL;
+			goto endCalc2;
+		}
+		if ('S' == pStockInfo->Name[0] || '*' == pStockInfo->Name[0])
+		{
+			delete[] pStockInfo;
+			pStockInfo = NULL;
+			goto endCalc2;
+		}
+		delete[] pStockInfo;
+		pStockInfo = NULL;
 	}
 
 	/* 计算个股上升空间百分比 */
@@ -226,7 +242,7 @@ BOOL InputInfoThenCalc2(char * Code,short nSetCode,int Value[4],short DataType,N
 	    long datanum = g_pFuncCallBack(Code,nSetCode,DataType,NULL,-1,time1,time2,nTQ,0);
 		if ( 2 > datanum )
 		{
-			OutputDebugString(L"========= g_pFuncCallBack error! =========\n");
+			//OutputDebugString(L"========= g_pFuncCallBack error! =========\n");
 			goto endCalc2;
 		}
 
@@ -236,7 +252,7 @@ BOOL InputInfoThenCalc2(char * Code,short nSetCode,int Value[4],short DataType,N
 		if ( 2 > readnum || readnum > datanum )
 		{
 			OutputDebugString(L"========= g_pFuncCallBack read error! =========\n");
-			delete pHisDat;
+			delete[] pHisDat;
 			pHisDat = NULL;
 			goto endCalc2;
 		}
@@ -246,7 +262,7 @@ BOOL InputInfoThenCalc2(char * Code,short nSetCode,int Value[4],short DataType,N
 		if (NULL == pMax)
 		{
 			OutputDebugString(L"========= maxClose error! =========\n");
-			delete []pHisDat;
+			delete[] pHisDat;
 			pHisDat=NULL;
 			goto endCalc2;
 		}
@@ -259,13 +275,13 @@ BOOL InputInfoThenCalc2(char * Code,short nSetCode,int Value[4],short DataType,N
 			OutputDebugString((LPCWSTR)Code);
 			OutputDebugString(L" Stop Trading.=========\n");
 
-			delete []pHisDat;
+			delete[] pHisDat;
 			pHisDat=NULL;
 			goto endCalc2;
 		}*/
 
 		fSonRate = (pMax->Close - pLate->Close)/pLate->Close;
-		delete []pHisDat;
+		delete[] pHisDat;
 		pHisDat=NULL;
 	}
 	
