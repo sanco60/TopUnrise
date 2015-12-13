@@ -41,11 +41,17 @@ void GetCopyRightInfo(LPPLUGIN info)
 	strcpy(info->Descript,"上升空间筛选");
 	strcpy(info->OtherInfo,"自定义天数上升空间筛选");
 	//填写参数信息
-	info->ParamNum = 1;
-	strcpy(info->ParamInfo[0].acParaName,"比例");
-	info->ParamInfo[0].nMin=MIN_SCALE;
-	info->ParamInfo[0].nMax=MAX_SCALE;
-	info->ParamInfo[0].nDefault=2;
+	info->ParamNum = 2;
+	
+	strcpy(info->ParamInfo[0].acParaName,"等份");
+	info->ParamInfo[0].nMin=1;
+	info->ParamInfo[0].nMax=20;
+	info->ParamInfo[0].nDefault=3;
+
+	strcpy(info->ParamInfo[1].acParaName,"增长份数");
+	info->ParamInfo[1].nMin=-100;
+	info->ParamInfo[1].nMax=100;
+	info->ParamInfo[1].nDefault=0;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -221,24 +227,25 @@ int calcUpPercent(char * Code, short nSetCode, short DataType, NTime time1, NTim
 
 	//窥视数据个数
 	long datanum = g_pFuncCallBack(Code, nSetCode, DataType, NULL, -1, time1, time2, nTQ, 0);
-	if ( 2 > datanum ){
+	if ( 1 > datanum ){
 		return iUpSpace;
 	}
 
 	LPHISDAT pHisDat = new HISDAT[datanum];
 
 	long readnum = g_pFuncCallBack(Code, nSetCode, DataType, pHisDat, datanum, time1, time2, nTQ, 0);
-	if ( 2 > readnum || readnum > datanum )
+	if ( 1 > readnum || readnum > datanum )
 	{
 		OutputDebugStringA("========= g_pFuncCallBack read error! =========\n");
 		delete[] pHisDat;
 		pHisDat = NULL;
 		return iUpSpace;
 	}
-	
+
 	//停牌股不计算直接返回
 	LPHISDAT pLate = pHisDat + readnum - 1;
-	if (FALSE == dateEqual(pLate->Time, time2))
+	if (FALSE == dateEqual(pLate->Time, time2)
+		|| fEqual(pLate->fVolume, 0.0))
 	{
 		OutputDebugStringA(Code);
 		OutputDebugStringA("====== Stop trading today. \n");
@@ -278,7 +285,9 @@ BOOL InputInfoThenCalc2(char * Code,short nSetCode,int Value[4],short DataType,N
 {
 	BOOL nRet = FALSE;
 
-	if ( Value[0] < MIN_SCALE || Value[0] > MAX_SCALE || NULL == Code )
+	if ( (Value[0] <= 0 || Value[0] > 100) 
+		|| (Value[1] < -100 || Value[1] > 100)  
+		|| NULL == Code )
 		goto endCalc2;	
 
 	int iFatherRate = 0, iSonRate = 0;
@@ -325,8 +334,14 @@ BOOL InputInfoThenCalc2(char * Code,short nSetCode,int Value[4],short DataType,N
 		OutputDebugStringA("=========== son calcUpPercent error!!\n");
 		goto endCalc2;
 	}
+
+	int iOneCopy = iFatherRate/Value[0];
+	iOneCopy = (0 == iOneCopy) ? 1 : iOneCopy;
+
+	int iLine = iFatherRate + Value[1]*iOneCopy;
+	iLine = (0 > iLine) ? 0 : iLine;
 	
-	if (iSonRate >= iFatherRate*Value[0])
+	if (iSonRate >= iLine)
 		nRet = TRUE;
 	
 endCalc2:
