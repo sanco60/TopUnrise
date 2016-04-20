@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "plugin.h"
+#include "stdio.h"
 
 #include "MemLeaker.h"
 
@@ -346,5 +347,14 @@ BOOL InputInfoThenCalc2(char * Code,short nSetCode,int Value[4],short DataType,N
 	
 endCalc2:
 	MEMLEAK_OUTPUT();
+
+	/*********** ≤‚ ‘”√ **************/
+	/*if (0 == strcmp(Code, "600606"))
+	{
+		char szMessage[128] = {0};
+		sprintf(szMessage, "break: %s = %d\n", Code, nRet);
+		OutputDebugStringA(szMessage);
+	}*/
+	/*********************************/
 	return nRet;
 }
